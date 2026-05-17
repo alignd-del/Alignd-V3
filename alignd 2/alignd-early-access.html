@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALIGND — Early Access</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brat: #d8ff63;
+    --brat-dim: rgba(216,255,99,0.10);
+    --brat-mid: rgba(216,255,99,0.28);
+    --brat-glow: rgba(216,255,99,0.06);
+    --off-black: #060606;
+    --surface: #0c0c0c;
+    --surface-2: #0f0f0f;
+    --off-white: #f0ede6;
+    --muted: rgba(240,237,230,0.38);
+    --faint: rgba(240,237,230,0.055);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--off-black);
+    color: var(--off-white);
+    font-family: 'IBM Plex Mono', monospace;
+    overflow-x: hidden;
+    cursor: none;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* CURSOR */
+  #cursor { position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none; mix-blend-mode: difference; }
+  #cursor-dot { position: absolute; width: 6px; height: 6px; background: var(--brat); border-radius: 50%; transform: translate(-50%, -50%); transition: transform 0.08s; }
+  #cursor-ring { position: absolute; width: 36px; height: 36px; border: 1px solid rgba(216,255,99,0.55); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.25s, height 0.25s, border-color 0.25s, transform 0.12s cubic-bezier(0.23,1,0.32,1); }
+  body:has(a:hover) #cursor-ring, body:has(button:hover) #cursor-ring { width: 52px; height: 52px; border-color: var(--brat); }
+
+  /* GRAIN */
+  #grain { position: fixed; inset: -50%; z-index: 9998; width: 200%; height: 200%; pointer-events: none; opacity: 0.032; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); animation: grain-shift 0.4s steps(1) infinite; }
+  @keyframes grain-shift {
+    0%   { transform: translate(0,0); } 10%  { transform: translate(-3%,-4%); } 20%  { transform: translate(-6%,2%); }
+    30%  { transform: translate(3%,-1%); } 40%  { transform: translate(-2%,6%); } 50%  { transform: translate(-5%,-3%); }
+    60%  { transform: translate(4%,1%); } 70%  { transform: translate(-1%,-5%); } 80%  { transform: translate(5%,3%); }
+    90%  { transform: translate(-3%,4%); } 100% { transform: translate(2%,-2%); }
+  }
+
+  /* BG BLOBS */
+  #bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; pointer-events: none; mix-blend-mode: screen; }
+  .blob-1 { width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(216,255,99,0.12) 0%, rgba(180,255,60,0.04) 40%, transparent 70%); filter: blur(60px); top: -20%; right: -15%; animation: blob-drift-1 16s ease-in-out infinite; }
+  .blob-2 { width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(140,255,20,0.09) 0%, rgba(200,255,80,0.03) 45%, transparent 70%); filter: blur(80px); bottom: 10%; left: -12%; animation: blob-drift-2 22s ease-in-out infinite; }
+  @keyframes blob-drift-1 { 0%,100% { transform: translate(0,0) scale(1); } 25% { transform: translate(-5vw, 8vh) scale(1.08); } 50% { transform: translate(3vw, -6vh) scale(0.93); } 75% { transform: translate(-8vw, 4vh) scale(1.05); } }
+  @keyframes blob-drift-2 { 0%,100% { transform: translate(0,0) scale(1); } 30% { transform: translate(7vw, -10vh) scale(1.12); } 60% { transform: translate(-4vw, 8vh) scale(0.9); } 80% { transform: translate(5vw, 3vh) scale(1.06); } }
+
+  /* GRID BG */
+  .page-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: linear-gradient(rgba(216,255,99,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(216,255,99,0.025) 1px, transparent 1px); background-size: 80px 80px; mask-image: radial-gradient(ellipse 85% 85% at 50% 50%, black 30%, transparent 100%); }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 3rem; }
+  .nav-logo { font-size: 0.88rem; font-weight: 700; letter-spacing: 0.3em; color: var(--brat); text-transform: uppercase; text-decoration: none; position: relative; }
+  .nav-logo::after { content: 'AI'; font-size: 0.35rem; letter-spacing: 0.15em; color: rgba(216,255,99,0.4); vertical-align: super; margin-left: 3px; }
+  .nav-back { font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 0.6rem; transition: color 0.2s; }
+  .nav-back:hover { color: var(--off-white); }
+  .nav-back::before { content: '←'; }
+
+  /* MAIN */
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8rem 2rem 4rem; position: relative; z-index: 1; }
+
+  .access-wrap { width: 100%; max-width: 480px; }
+
+  .access-eyebrow {
+    font-size: 0.52rem; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--brat); margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 0.8rem;
+    opacity: 0; animation: rise 0.9s cubic-bezier(0.23,1,0.32,1) 0.1s forwards;
+  }
+  .access-eyebrow::before { content: ''; display: inline-block; width: 20px; height: 1px; background: var(--brat); opacity: 0.55; }
+
+  .access-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 7vw, 5rem);
+    font-weight: 800; line-height: 0.9; letter-spacing: -0.04em;
+    margin-bottom: 1.2rem;
+    opacity: 0; animation: rise 0.9s cubic-bezier(0.23,1,0.32,1) 0.25s forwards;
+  }
+  .access-title em { color: var(--brat); font-style: italic; }
+
+  .access-sub {
+    font-size: 0.7rem; line-height: 2; color: var(--muted);
+    margin-bottom: 3rem;
+    opacity: 0; animation: rise 0.9s cubic-bezier(0.23,1,0.32,1) 0.4s forwards;
+  }
+
+  .access-card {
+    border: 1px solid var(--faint);
+    background: rgba(12,12,12,0.85);
+    backdrop-filter: blur(16px);
+    padding: 2.4rem;
+    position: relative;
+    opacity: 0; animation: rise 0.9s cubic-bezier(0.23,1,0.32,1) 0.55s forwards;
+  }
+  .access-card::before {
+    content: '◈ ENTER YOUR CODE';
+    position: absolute; top: -0.6rem; left: 1.5rem;
+    font-size: 0.46rem; letter-spacing: 0.22em;
+    background: var(--off-black); padding: 0 0.6rem; color: rgba(216,255,99,0.45);
+  }
+
+  .input-row { display: flex; gap: 0; margin-bottom: 1rem; }
+  .code-input {
+    flex: 1;
+    background: rgba(240,237,230,0.03);
+    border: 1px solid var(--faint);
+    border-right: none;
+    color: var(--brat);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 1rem 1.2rem;
+    outline: none;
+    transition: border-color 0.25s, background 0.25s;
+  }
+  .code-input::placeholder { color: rgba(216,255,99,0.2); letter-spacing: 0.12em; font-weight: 400; }
+  .code-input:focus { border-color: var(--brat-mid); background: rgba(216,255,99,0.03); }
+
+  .btn-unlock {
+    background: var(--brat); color: var(--off-black);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+    letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700;
+    padding: 1rem 1.6rem; border: none; cursor: none;
+    position: relative; overflow: hidden;
+    transition: box-shadow 0.3s;
+    white-space: nowrap;
+  }
+  .btn-unlock::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.18); transform: translateX(-101%) skewX(-12deg); transition: transform 0.4s cubic-bezier(0.23,1,0.32,1); }
+  .btn-unlock:hover { box-shadow: 0 4px 32px rgba(216,255,99,0.35); }
+  .btn-unlock:hover::before { transform: translateX(101%) skewX(-12deg); }
+  .btn-unlock span { position: relative; z-index: 1; }
+
+  .error-msg { font-size: 0.58rem; letter-spacing: 0.1em; color: #ef4444; min-height: 1.2rem; }
+
+  /* SUCCESS STATE */
+  .success-box { display: none; border: 1px solid var(--brat-dim); background: rgba(216,255,99,0.04); padding: 2rem; margin-top: 1.5rem; position: relative; }
+  .success-box::before { content: '◈ ACCESS GRANTED'; position: absolute; top: -0.6rem; left: 1.5rem; font-size: 0.46rem; letter-spacing: 0.22em; background: var(--off-black); padding: 0 0.6rem; color: var(--brat); }
+  .success-label { font-size: 0.52rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brat); margin-bottom: 0.6rem; }
+  .success-msg { font-size: 0.66rem; line-height: 2; color: var(--muted); margin-bottom: 1.8rem; }
+
+  .btn-download {
+    display: inline-flex; align-items: center; gap: 0.8rem;
+    background: transparent; color: var(--brat);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    padding: 0.9rem 2rem; text-decoration: none;
+    border: 1px solid var(--brat-mid); cursor: none;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+    position: relative; overflow: hidden;
+  }
+  .btn-download::before { content: ''; position: absolute; inset: 0; background: var(--brat); transform: translateY(101%); transition: transform 0.3s cubic-bezier(0.23,1,0.32,1); }
+  .btn-download:hover { color: var(--off-black); box-shadow: 0 0 40px rgba(216,255,99,0.2); }
+  .btn-download:hover::before { transform: translateY(0); }
+  .btn-download span { position: relative; z-index: 1; }
+  .btn-download svg { position: relative; z-index: 1; width: 14px; height: 14px; }
+
+  .install-note { font-size: 0.54rem; letter-spacing: 0.08em; color: rgba(240,237,230,0.22); margin-top: 1rem; line-height: 1.9; }
+  .install-note strong { color: var(--brat); font-weight: 500; }
+
+  /* FOOTER */
+  footer { position: relative; z-index: 1; text-align: center; padding: 2rem; border-top: 1px solid var(--faint); }
+  .footer-copy { font-size: 0.52rem; letter-spacing: 0.14em; color: rgba(240,237,230,0.18); }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div id="cursor"><div id="cursor-dot"></div><div id="cursor-ring"></div></div>
+<div id="grain"></div>
+<div id="bg-blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+<div class="page-grid"></div>
+
+<nav>
+  <a href="/" class="nav-logo">Alignd</a>
+  <a href="/" class="nav-back">Back to site</a>
+</nav>
+
+<main>
+  <div class="access-wrap">
+    <p class="access-eyebrow">Beta Program</p>
+    <h1 class="access-title">Early<br><em>access</em></h1>
+    <p class="access-sub">You've been personally invited to test Alignd before public launch. Enter your access code below to download the app.</p>
+
+    <div class="access-card">
+      <div class="input-row">
+        <input class="code-input" type="text" id="code-input" placeholder="XXXX-XXXX" maxlength="24" autocomplete="off" spellcheck="false" oninput="clearError()" onkeydown="if(event.key==='Enter') checkCode()" />
+        <button class="btn-unlock" onclick="checkCode()"><span>Unlock →</span></button>
+      </div>
+      <p class="error-msg" id="error-msg"></p>
+    </div>
+
+    <div class="success-box" id="success-box">
+      <p class="success-label">Welcome to the beta</p>
+      <p class="success-msg">You're in. Download the app below and install it on your Mac. If you run into anything, reply to your invite email directly.</p>
+      <a class="btn-download" href="https://drive.google.com/uc?export=download&id=1BXyw5VOPbbieamaXHvr6KG_IfEM4TGnT">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Download for Mac</span>
+      </a>
+      <p class="install-note">
+  <strong>Step 1 —</strong> Open the .dmg and drag Alignd to Applications.<br>
+  <strong>Step 2 —</strong> Right-click the app → Open (don't double-click).<br>
+  <strong>Step 3 —</strong> macOS will warn you — click <strong>Open</strong> to confirm.<br>
+  This only happens once. After that it opens normally.
+</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p class="footer-copy">© 2026 Alignd. Early access — not for distribution.</p>
+</footer>
+
+<script>
+  const VALID_CODES = [
+    'ALIGND-ALPHA',
+    'ALIGND-BETA1',
+    'ALIGND-BETA2',
+    'ALIGND-BETA3',
+    'ALIGND-BETA4',
+    'OAKLEY-ADMIN-2',
+  ];
+
+  function checkCode() {
+    const val = document.getElementById('code-input').value.trim().toUpperCase();
+    if (!val) { showError('Enter your access code.'); return; }
+    if (VALID_CODES.includes(val)) {
+      document.getElementById('success-box').style.display = 'block';
+      document.getElementById('error-msg').textContent = '';
+      document.querySelector('.access-card').style.opacity = '0.4';
+      document.querySelector('.access-card').style.pointerEvents = 'none';
+      document.getElementById('success-box').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      showError('That code isn\'t recognised. Check for typos.');
+    }
+  }
+
+  function showError(msg) { document.getElementById('error-msg').textContent = msg; }
+  function clearError() { document.getElementById('error-msg').textContent = ''; }
+
+  const dot = document.getElementById('cursor-dot');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; dot.style.left = mx+'px'; dot.style.top = my+'px'; });
+  function lerpCursor() { rx += (mx-rx)*0.12; ry += (my-ry)*0.12; ring.style.left = rx+'px'; ring.style.top = ry+'px'; requestAnimationFrame(lerpCursor); }
+  lerpCursor();
+</script>
+</body>
+</html>
